@@ -14,7 +14,7 @@ class Game:
         self.screen = pygame.display.set_mode((640,480))
         self.display = pygame.Surface((320, 240))
         self.clock = pygame.time.Clock()
-
+       
         # movement var
         self.movement = [False, False]
         # assets here 
@@ -40,7 +40,7 @@ class Game:
         self.player = Player(self , (50,50), (8,15))
         
         self.tilemap = Tilemap(self, tile_size=16)
-
+        self.tilemap.load('map.json')
         self.scroll = [0,0]
 
     def run(self):
@@ -62,7 +62,7 @@ class Game:
             self.player.update(self.tilemap, (self.movement[1]-self.movement[0],  0))
             self.player.render(self.display,  offset=self.scroll)
 
-            print(self.tilemap.physics_rects_around(self.player.pos))
+           # print(self.tilemap.physics_rects_around(self.player.pos))
             
             for event in pygame.event.get(): 
                 if event.type == pygame.QUIT: 

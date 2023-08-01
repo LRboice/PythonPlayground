@@ -27,6 +27,11 @@ class Editor:
           
         self.tilemap = Tilemap(self, tile_size=16) 
         
+        try:
+            self.tilemap.load('map.json')
+        except FileNotFoundError:
+            pass
+
         self.scroll = [0,0]
 
         self.tile_list = list(self.assets) #hold available assets here
@@ -35,6 +40,8 @@ class Editor:
         self.clicking = False
         self.rightClick = False
         self.shift = False
+        self.ongrid = True
+
     def run(self):
         while True: 
             # make screen background here 
@@ -53,14 +60,23 @@ class Editor:
             mauspoz = (mauspoz[0] / RENDER_SCALE, mauspoz[1] / RENDER_SCALE) 
             tilepoz = (int((mauspoz[0] + self.scroll[0]) // self.tilemap.tile_size), int((mauspoz[1] + self.scroll[1]) // self.tilemap.tile_size))
 
-            self.display.blit(curTileImg, (tilepoz[0] * self.tilemap.tile_size - self.scroll[0], tilepoz[1] * self.tilemap.tile_size - self.scroll[1]))
-            if self.clicking:
+            if self.ongrid:
+                self.display.blit(curTileImg, (tilepoz[0] * self.tilemap.tile_size - self.scroll[0], tilepoz[1] * self.tilemap.tile_size - self.scroll[1]))
+            else:
+                self.display.blit(curTileImg, mauspoz)
+
+            if self.clicking and self.ongrid:
                 self.tilemap.tilemap[str(tilepoz[0]) + ';' + str(tilepoz[1])] = {'type' : self.tile_list[self.tile_group], 'variant' : self.tile_variant, 'pos': tilepoz}
+           
             if self.rightClick:
                 tile_loc = str(tilepoz[0]) + ';' + str(tilepoz[1])
                 if tile_loc in self.tilemap.tilemap:
                     del self.tilemap.tilemap[tile_loc]
-
+                for tile in self.tilemap.offgrid_tiles.copy():
+                    tile_img = self.assets[tile['type']][tile['variant']] #get tile imgs
+                    tile_r = pygame.Rect(tile['pos'][0] - self.scroll[0], tile['pos'][1] - self.scroll[1], tile_img.get_width(), tile_img.get_height()) #hitbox calc
+                    if tile_r.collidepoint(mauspoz):
+                        self.tilemap.offgrid_tiles.remove(tile)
 
             self.display.blit(curTileImg, (5, 5))  #displays currently selected tile in top left corner
 
@@ -73,6 +89,8 @@ class Editor:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         self.clicking = True
+                        if not self.ongrid:
+                            self.tilemap.offgrid_tiles.append({'type' : self.tile_list[self.tile_group], 'variant' : self.tile_variant, 'pos': (mauspoz[0] + self.scroll[0], mauspoz[1] + self.scroll[1])})
                     if event.button == 3:
                         self.rightClick = True
                     if self.shift:
@@ -104,7 +122,13 @@ class Editor:
                         self.movement[2] = True
                     if event.key == pygame.K_s:#downs
                         self.movement[3] = True
-                    if event.key == pygame.K_LSHIFT:
+                    if event.key == pygame.K_g: #press g to snap to grid
+                        self.ongrid = not self.ongrid
+                    if event.key == pygame.K_o:
+                        self.tilemap.save('map.json')
+                    if event.key == pygame.K_t: 
+                        self.tilemap.autotile()
+                    if event.key == pygame.K_LSHIFT: #shift
                         self.shift = True
 
                 if event.type == pygame.KEYUP: 
